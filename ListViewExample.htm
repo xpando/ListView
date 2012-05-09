@@ -1,0 +1,153 @@
+<HTML XMLNS:HFC>
+<HEAD>
+<?IMPORT NAMESPACE="HFC" IMPLEMENTATION="ListView.htc" />
+<SCRIPT>
+function loadUrl() {
+	var root = document.location.href;
+	root = root.substr(0, root.indexOf('ListViewExample.htm'));
+	list.load(root+'listdata.xml');
+}
+function loadXmlDataIsland() {
+	list.loadXml(xmlDataIsland);
+}
+function loadXmlString() {
+	list.loadXml(xmlSource.value);
+}
+function loadDataWithScript() {
+	list.reset();
+
+	list.addColumn('Img', 30, -1);
+	list.addColumn('Chk', 30, -1);
+	list.addColumn('Description', 150, 1);
+	list.addColumn('Link', 80, 80);
+
+	list.selectedBGColor = '#90ee90';
+	list.selectedFGColor = 'black';
+	
+	for (var i=0; i<100; i++) {
+		var oItem;
+		var oCell;
+		
+		oItem = list.addItem();
+		oItem.itemData = i;
+		
+		if (i%2>0) {
+			oItem.style.backgroundColor = 'seashell';
+		}
+		
+		oCell = oItem.insertCell();
+		oCell.innerHTML		= '<img src="icon.jpg">';
+		oCell.width			= list.columns.item(0).style.width;
+
+		oCell = oItem.insertCell();
+		oCell.innerHTML		= '<input type=checkbox value=' + i + ' onclick="chk_onClick()">';
+		oCell.width			= list.columns.item(1).style.width;
+
+		oCell = oItem.insertCell();
+		oCell.innerHTML		= '<b>New Row ' + i + '</b><br><i>This row was inserted from script!</i>'; 
+		oCell.width			= list.columns.item(2).style.width;
+
+		oCell = oItem.insertCell();
+		oCell.innerHTML		= '<u onclick="link_onClick()" style="cursor:hand;">Link</u>';
+		oCell.width			= list.columns.item(3).style.width;
+	}
+}
+function chk_onClick() {
+	event.returnValue	= true;
+	event.cancelBubble	= true;
+}
+function link_onClick() {
+	alert('Link!');
+	event.returnValue	= false;
+	event.cancelBubble	= true;
+}
+function list_onClick() {
+	if (null != list.selectedItem)
+		lastClick.innerHTML = '<table border=0 cellpadding=0 cellspacing=0>' + list.selectedItem.outerHTML + '</table>';
+}
+function list_onDblClick() {
+	if (null != list.selectedItem)
+		lastDblClick.innerHTML = '<table border=0 cellpadding=0 cellspacing=0>' + list.selectedItem.outerHTML + '</table>';
+}
+function list_onSelChange() {
+	if (null != list.selectedItem)
+		lastSelect.innerHTML = '<table border=0 cellpadding=0 cellspacing=0>' + list.selectedItem.outerHTML + '</table>';
+}
+</SCRIPT>
+</HEAD>
+<BODY>
+
+<H1>DHTML ListView Example.</H1>
+
+<HFC:LISTVIEW id=list style="width:100%;height:300px;border: inset 2px;" onclick="list_onClick()" ondblclick="list_onDblClick()" onselchange="list_onSelChange()">
+<xml>
+<listdata>
+	<header width="30" minwidth="-1">Img</header>
+	<header width="30" minwidth="-1">Chk</header>
+	<header width="250" minwidth="1">Description</header>
+	<header width="80" minwidth="80">Link</header>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from the contents of the LISTVIEW tag when the document loaded!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from the contents of the LISTVIEW tag when the document loaded!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from the contents of the LISTVIEW tag when the document loaded!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from the contents of the LISTVIEW tag when the document loaded!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from the contents of the LISTVIEW tag when the document loaded!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+</listdata>
+</xml>
+</HFC:LISTVIEW>
+
+<br>
+
+<B>Current Selected Item:</B><BR>
+<div id=lastSelect style="border:solid black 1px; width:100%;">
+</div>
+
+<br>
+
+<B>Last Clicked Item:</B><BR>
+<div id=lastClick style="border:solid black 1px; width:100%;">
+</div>
+
+<br>
+
+<B>Last Double Clicked Item:</B><BR>
+<div id=lastDblClick style="border:solid black 1px; width:100%;">
+</div>
+
+
+<br><br><hr><br>
+
+<INPUT style="text-align:left;" type=button onclick="list.reset()" value="Reset list contents">
+<INPUT style="text-align:left;" type=button onclick="loadDataWithScript()" value="Insert rows with script">
+<INPUT style="text-align:left;" type=button onclick="loadUrl()" value="Load xml data from a url">
+<INPUT style="text-align:left;" type=button onclick="loadXmlDataIsland()" value="Load xml data from a data island in the document">
+<INPUT style="text-align:left;" type=button onclick="loadXmlString()" value="Load xml data from a string">
+<TEXTAREA id=xmlSource rows=10 wrap=off style="width:100%;">
+<listdata>
+	<header width="30" minwidth="-1">Img</header>
+	<header width="30" minwidth="-1">Chk</header>
+	<header width="250" minwidth="1">Description</header>
+	<header width="80" minwidth="80">Link</header>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This data was loaded from an xml source string!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This data was loaded from an xml source string!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This data was loaded from an xml source string!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This data was loaded from an xml source string!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This data was loaded from an xml source string!</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+</listdata>
+</TEXTAREA>
+
+<xml id=xmlDataIsland>
+<listdata>
+	<header width="30" minwidth="-1">Img</header>
+	<header width="30" minwidth="-1">Chk</header>
+	<header width="250" minwidth="1">Description</header>
+	<header width="80" minwidth="80">Link</header>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from an xml data island.</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from an xml data island.</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from an xml data island.</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from an xml data island.</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+	<row><col><![CDATA[<img src="icon.jpg">]]></col><col><![CDATA[<input type=checkbox onclick="chk_onClick()">]]></col><col>This xml data was loaded from an xml data island.</col><col><![CDATA[<u onclick="link_onClick()" style="cursor:hand;">Link</u>]]></col></row>
+</listdata>
+</xml>
+
+</BODY>
+</HTML>

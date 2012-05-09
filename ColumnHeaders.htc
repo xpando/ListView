@@ -1,0 +1,196 @@
+<!-- ---------------------------------------------------------------------
+//
+//  Copyright 2000 David Findley.  All Rights Reserved.
+//
+//  Author:       David Findley
+//  Email:        findleyd@hotmail.com
+//
+//  File:         ColumnHeaders.htc
+//
+//  Description:  The column headers behavior provides resizable column  
+//                headings like the ones found in windows explorer details  
+//                view. This is used to provide the column header 
+//                functionality to the listview behavior. 
+//                
+//-------------------------------------------------------------------- -->
+
+<HTML>
+<HEAD>
+
+<PUBLIC:COMPONENT tagName=COLUMNHEADERS>
+	<PUBLIC:EVENT NAME=onresize ID=onresize />
+	<PUBLIC:EVENT NAME=onclick ID=onclick />
+
+	<PUBLIC:METHOD NAME=clear />
+	<PUBLIC:METHOD NAME=addColumn />
+	
+	<PUBLIC:PROPERTY NAME=columns GET=getColumns />
+
+	<ATTACH EVENT="oncontentready" ONEVENT="element_onContentReady()" />
+</PUBLIC:COMPONENT>   
+
+<STYLE id=defaultStyles>
+DIV {
+	width:				100%;
+	background-color:	buttonface;
+}
+BODY {
+	font-family:		arial;
+	font-size:			8pt;
+	font-weight:		normal;
+	color:				black;
+	background-color:	buttonface;
+	white-space:		nowrap;
+}
+.columnHeaderStyle {
+	border:				outset 2px;
+	background-color:	buttonface;
+	overflow:			hidden;
+	padding-left:		4px;
+	padding-right:		4px;
+}
+</STYLE>
+
+<SCRIPT language=JScript>
+//////////////////////////////////////////////////////////
+// Private Variables
+//////////////////////////////////////////////////////////
+var columnElements			= new Array();
+var captureElement			= null;
+var bResizeing				= false;
+var cxDividerWidth			= 8;
+
+//////////////////////////////////////////////////////////
+// Private Methods
+//////////////////////////////////////////////////////////
+
+function element_onContentReady() {
+	defaults.viewLink = document;
+}
+
+//////////////////////////////////////////////////////////
+// Public Methods
+//////////////////////////////////////////////////////////
+
+function clear() {
+	columnElements = new Array();
+	columnView.innerHTML = '';
+}
+
+function addColumn(szCaption, cxWidth, minWidth) {
+	// append a <SPAN> to the column headers
+
+	var idx								= columnElements.length;
+	columnElements[idx]					= document.createElement('SPAN');
+	columnElements[idx].className		= 'columnHeaderStyle';
+	columnElements[idx].style.overflow	= 'hidden';
+	columnElements[idx].style.width		= cxWidth;
+	columnElements[idx].innerHTML		= szCaption;
+	columnElements[idx].index			= idx;
+	columnElements[idx].minWidth		= minWidth;
+
+	columnView.appendChild(columnElements[idx]);
+	
+	return columnElements[idx];
+}
+
+function getColumns() {
+	return columnView.getElementsByTagName('SPAN');
+}
+
+//////////////////////////////////////////////////////////
+// Event Handlers
+//////////////////////////////////////////////////////////
+
+function onMouseUp() {
+	elem = event.srcElement;
+	
+	if (null != captureElement) {
+		captureElement.releaseCapture();
+		captureElement = null;
+	}
+}
+
+function onMouseDown() {
+	elem = event.srcElement;
+	if (elem.className == 'columnHeaderStyle') {
+		if (event.offsetX > (elem.offsetWidth-8)) {
+			bResizeing = true;
+			captureElement = elem;
+			lastX = event.screenX;
+			elem.setCapture();
+		}
+	}
+}
+
+function onMouseMove() {
+	elem = event.srcElement;
+	
+	if (null != captureElement) {
+		if (captureElement.minWidth != -1) {
+			var diff = event.x - captureElement.offsetLeft - captureElement.offsetWidth;
+			var newWidth = captureElement.offsetWidth + diff;
+		
+			if (newWidth >= captureElement.minWidth) {
+				var idx = captureElement.getAttribute('colidx');
+				captureElement.style.width = newWidth + 'px';
+				
+				// fire the onColumnResizeEvent
+				var oEvent				= createEventObject();
+				oEvent.columnElement	= captureElement;
+				onresize.fire(oEvent);
+			}
+		}
+	}
+	else {
+		// check if the user is moving the mouse over the column divider
+		// the divider is considered to be the last 8 pixels of the column header <SPAN>
+		// if so then we need to change the cursor to <-||-> other wise set the
+		// cursor back to the arrow
+		if (elem.className == 'columnHeaderStyle') {
+			if ((elem.minWidth != -1) && (event.offsetX > (elem.offsetWidth-cxDividerWidth))) {
+				elem.style.cursor = 'hand';
+			}
+			else {
+				elem.style.cursor = 'default';
+			}
+		}
+	}
+}
+
+function onMouseOut() {
+	elem = event.srcElement;
+	if (elem.className == 'columnHeader') {
+		elem.style.cursor = 'default';
+	}
+}
+
+function onClick() {
+	elem = event.srcElement;
+	if (elem.className == 'columnHeaderStyle') {
+			// only fire on click if they are not in the "Resize Zone"
+			if (!bResizeing) {
+				var oEvent				= createEventObject();
+				oEvent.columnElement	= elem;
+				onclick.fire(oEvent);
+			}
+	}	
+	
+	bResizeing = false;
+	
+	// don't let the on click event bubble 
+	event.returnValue = false;
+	event.cancelBubble = true;
+}
+
+function onSelectStart() {
+	// cancel all selection events
+	event.returnValue = false;
+	event.cancelBubble = true;
+}
+</SCRIPT>
+</HEAD>
+<BODY scroll=no onselectstart="onSelectStart()" onmousedown="onMouseDown()" onmouseup="onMouseUp()" onmouseout="onMouseOut()" onmousemove="onMouseMove()" onclick="onClick()">
+	<DIV id=columnView />
+</BODY>
+</HTML>

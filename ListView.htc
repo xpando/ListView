@@ -1,0 +1,437 @@
+<!-- ---------------------------------------------------------------------
+//
+//  Copyright 2000 David Findley.  All Rights Reserved.
+//
+//  Author:       David Findley
+//  Email:        findleyd@hotmail.com
+//
+//  File:         ListView.htc
+//
+//  Description:  The listview behavior provides a multi column  
+//                list control like the one found in windows explorer.  
+//                It can also be used as a grid control. You can make 
+//                the column headings fixed or variable width. The list 
+//                contents can be loaded from xml in one of 3 ways:  
+//                XML data island, string of xml data, or a url to xml data
+//                        
+//                The up, down, space and enter keys work now. The space
+//                will cause a click event for the selected item. The        
+//                enter key will cause a double click event for the 
+//                selected item. Page up, page down, home and end will
+//                be done later.        
+//                        
+//                        
+//  TODOS:        Improve error handling. (bad xml data etc...)
+//
+//                Make cells editable using the new contentEditable
+//                attribute of IE 5.5        
+//                        
+//                Possibly make the listview virtual so you can specify
+//                say 10,000 rows and have it display what you can                          
+//                see and fire an event to get data when new rows are 
+//                scrolled into view.
+//
+//                given that I get the above 2 things done
+//                the grid could be made to bind to a SQL 2000 VDir
+//                on IIS and get table data, let you edit it, and post it
+//                back as an XML update query. (This would be awesome!,
+//                The fact that this is even possible is a credit to the
+//                functionality that is in IE 5.5)
+//
+//-------------------------------------------------------------------- -->
+
+<HTML XMLNS:HFC>
+<HEAD>
+
+<PUBLIC:COMPONENT tagName=LISTVIEW>
+	<PUBLIC:EVENT NAME=onselchange	id=onselchange />
+	<PUBLIC:EVENT NAME=onclick		id=onclick />
+	<PUBLIC:EVENT NAME=ondblclick	id=ondblclick />
+
+	<PUBLIC:METHOD NAME=load />
+	<PUBLIC:METHOD NAME=loadXml />
+	<PUBLIC:METHOD NAME=reset />
+	<PUBLIC:METHOD NAME=removeAll />
+	<PUBLIC:METHOD NAME=addColumn />
+	<PUBLIC:METHOD NAME=addItem />
+
+	<PUBLIC:PROPERTY NAME=selectedItem GET=getSelectedItem PUT=setSelectedItem />
+	<PUBLIC:PROPERTY NAME=columns GET=getColumns />
+	<PUBLIC:PROPERTY NAME=items GET=getItems />
+	<PUBLIC:PROPERTY NAME=selectedBGColor />
+	<PUBLIC:PROPERTY NAME=selectedFGColor />
+	
+	<ATTACH EVENT="oncontentready"	ONEVENT="element_onContentReady()" />
+	<ATTACH EVENT="onresize"		ONEVENT="element_onResize()" />
+	<ATTACH EVENT="onselectstart"	ONEVENT="cancelBubble()" />
+</PUBLIC:COMPONENT>   
+
+<?IMPORT NAMESPACE="HFC" IMPLEMENTATION="ColumnHeaders.htc" />
+
+<STYLE>
+BODY {
+	cursor: default;
+}
+DIV.headerStyle {
+	width:						100%;
+	border:						none;
+	background-color:			white;
+	overflow:					hidden;
+}
+DIV.gridStyle {
+	width:						100%;
+	height:						expression(body.clientHeight-headerView.offsetHeight+'px');
+	border:						none;
+	background-color:			white;
+	overflow:					auto;
+}
+TABLE {
+	font-family:				Arial;
+	font-size:					8pt;
+	border:						none;
+	table-layout:				fixed;
+	border-collapse:			collapse;
+	padding-left:				4px;
+	padding-right:				4px;
+}
+TR {
+	color:						black;
+}
+TD {
+	border:						solid #C0C0C0 1px;
+	text-align:					left;
+	verticle-align:				middle;
+}
+</STYLE>
+
+<SCRIPT>
+//////////////////////////////////////////////////////////
+// Private Variables
+//////////////////////////////////////////////////////////
+
+var const_iKeyCode_Enter		= 13;
+var const_iKeyCode_Escape		= 27;
+var const_iKeyCode_Space		= 32;
+var const_iKeyCode_PageUp		= 33;
+var const_iKeyCode_PageDown		= 34;
+var const_iKeyCode_End			= 35;
+var const_iKeyCode_Home			= 36;
+var const_iKeyCode_LeftArrow	= 37;
+var const_iKeyCode_UpArrow		= 38;
+var const_iKeyCode_RightArrow	= 39;
+var const_iKeyCode_DownArrow	= 40;
+
+var grid						= null;
+var selectedItem				= null;
+var selectedBGColor				= 'yellow';
+var selectedFGColor				= 'black';
+
+//////////////////////////////////////////////////////////
+// Private Methods
+//////////////////////////////////////////////////////////
+
+function createGrid() {
+	gridView.innerHTML	= '';
+	grid				= document.createElement('TABLE');
+	grid.border			= 0;
+	grid.cellspacing	= 0;
+	grid.cellpadding	= 0;
+	gridView.appendChild(grid);
+}
+
+function getTRParent(elem) {
+	if (elem.tagName == 'BODY')
+		return null;
+		
+	if (elem.tagName == 'TR')
+		return elem;
+		
+	return getTRParent(elem.parentElement);
+}
+
+function isItemVisible(item) {
+	if ( (item.offsetTop > gridView.scrollTop) &&
+		 (item.offsetTop < (gridView.scrollTop + gridView.offsetHeight)) &&
+		 ((item.offsetTop + item.offsetHeight) < (gridView.scrollTop + gridView.offsetHeight)) &&
+		 ((item.offsetTop + item.offsetHeight) > gridView.scrollTop) )
+		return true;
+		
+	return false;
+}
+
+//////////////////////////////////////////////////////////
+// Public Methods
+//////////////////////////////////////////////////////////
+
+function reset() {
+	// reset the headers and the grid view
+	headers.clear();
+	createGrid();
+}
+
+function removeAll() {
+	// just clear the grid view
+	createGrid();
+}
+
+function addColumn(szCaption, cxWidth, cxMinWidth) {
+	return headers.addColumn(szCaption, cxWidth, cxMinWidth);
+}
+
+function addItem() {
+	var newItem = grid.insertRow();
+	newItem.index = grid.rows.length - 1;
+	return newItem;
+}
+
+function load(url) {
+	var xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+	xmlDoc.async = false;
+	xmlDoc.load(url);
+	loadXml(xmlDoc);
+}
+
+function loadXml(xml) {
+	// clean out the list view
+	reset();
+	
+	// if xml source was passed then load and parse it.
+	if ('string' == typeof(xml)) {
+		var xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+		xmlDoc.async = false;
+		xmlDoc.loadXML(xml);
+		xml = xmlDoc;
+	}
+	
+	if ('object' == typeof(xml)) {
+		var headers = xml.documentElement.getElementsByTagName('header');
+	
+		if (null != headers) {
+			for (var h=0; h<headers.length; h++) {
+				var header = headers.item(h);
+				addColumn(header.text, header.getAttribute('width'), header.getAttribute('minwidth'));
+			}
+		}
+				
+		var rows = xml.documentElement.getElementsByTagName('row');
+		if (null != rows) {
+			for (var r=0; r<rows.length; r++) {
+				var row = rows.item(r);
+				var cols = row.getElementsByTagName('col') 
+
+				var newRow = addItem();
+				if (null != cols) {
+					for (var c=0; c<cols.length; c++) {
+						var col = cols.item(c);
+
+						var newCell = newRow.insertCell();
+						newCell.innerHTML = col.text;
+						if (c < headers.length)
+							newCell.width = headers.item(c).getAttribute('width');
+					}
+				}
+			}
+		}
+	}
+}
+
+function getColumns() {
+	return headers.columns;
+}
+
+function getItems() {
+	return grid;
+}
+
+function getSelectedItem() {
+	return selectedItem;
+}
+
+function setSelectedItem(vValue) {
+	// turn off the hilite of the previouse selected item
+	if (null != selectedItem) {
+		selectedItem.style.color			= selectedItem.oldFGColor;
+		selectedItem.style.backgroundColor	= selectedItem.oldBGColor;
+	}
+	
+	selectedItem = vValue;
+
+	// turn on the hilite for the newly selected item	
+	if (null != selectedItem) {
+		selectedItem.oldFGColor				= selectedItem.style.color;
+		selectedItem.oldBGColor				= selectedItem.style.backgroundColor;
+		selectedItem.style.color			= selectedFGColor;
+		selectedItem.style.backgroundColor	= selectedBGColor;
+		
+		// sizing the cells in the first row resizes all the rows in the table
+		// so we don't have to do this, we only do this so that clients
+		// can access the cells of the selectedItem property and get the correct
+		// column widths
+		//if (selectedItem.index > 0)
+			for (var i=0; i<selectedItem.cells.length; i++)
+				selectedItem.cells.item(i).width = columns.item(i).offsetWidth;
+		
+		var oEvent = createEventObject();
+		oEvent.selectedItem = selectedItem;
+		onselchange.fire(oEvent);
+	}
+}
+
+//////////////////////////////////////////////////////////
+// Event Handlers
+//////////////////////////////////////////////////////////
+
+function element_onContentReady() {
+	defaults.viewLink = document;
+
+	createGrid();
+	
+	// if there is an xml tag inside our tag then load the data
+	// into the list view
+	var xml = element.getElementsByTagName('xml');
+	if (null != xml) {
+		loadXml(xml.item(0));
+	}
+}
+
+function element_onResize() {
+	// sync the scroll positions
+	gridView_onScroll();
+}
+
+function listView_onClick() {
+	setSelectedItem(getTRParent(event.srcElement));
+	
+	var oEvent = createEventObject();
+	onclick.fire(oEvent);
+	
+	cancelBubble();
+}
+
+function listView_onDblClick() {
+	setSelectedItem(getTRParent(event.srcElement));
+
+	var oEvent = createEventObject();
+	ondblclick.fire(oEvent);
+
+	cancelBubble();
+}
+
+function listView_onKeyDown() {
+	switch (event.keyCode) {
+		case  const_iKeyCode_Enter:
+			//alert('enter');
+			var oEvent = createEventObject();
+			oEvent.selectedItem = selectedItem;
+			ondblclick.fire(oEvent);
+			cancelBubble();
+			break;
+		case  const_iKeyCode_Escape:
+			alert('escape');
+			break;
+		case  const_iKeyCode_Space:
+			//alert('space');
+			var oEvent = createEventObject();
+			oEvent.selectedItem = selectedItem;
+			onclick.fire(oEvent);
+			cancelBubble();
+			break;
+		case  const_iKeyCode_PageUp:
+			alert('pageup');
+			break;
+		case  const_iKeyCode_PageDown:
+			alert('pagedown');
+			break;
+		case  const_iKeyCode_End:
+			alert('end');
+			break;
+		case  const_iKeyCode_Home:
+			alert('home');
+			break;
+		case  const_iKeyCode_LeftArrow:
+			alert('left');
+			break;
+		case  const_iKeyCode_UpArrow:
+			//alert('up');
+			if (selectedItem != null) {
+				var idx = selectedItem.index - 1;
+				
+				if (idx < 0)
+					idx = grid.rows.length - 1;
+					
+				var item = grid.rows.item(idx);	
+
+				if (!isItemVisible(item)) {
+					gridView.scrollTop = item.offsetTop;
+				}
+				
+				setSelectedItem(item);
+
+				cancelBubble();
+			}
+			break;
+		case  const_iKeyCode_RightArrow:
+			alert('right');
+			break;
+		case  const_iKeyCode_DownArrow:
+			//alert('down');
+			if (selectedItem != null) {
+				var idx = selectedItem.index + 1;
+				
+				if (idx == grid.rows.length)
+					idx = 0;
+
+				var item = grid.rows.item(idx);	
+
+				if (!isItemVisible(item)) {
+					gridView.scrollTop = item.offsetTop + item.offsetHeight - gridView.offsetHeight;
+				}
+					
+				setSelectedItem(item);
+				
+				cancelBubble();
+			}
+			break;
+	}
+}
+
+function gridView_onScroll() {
+	// sync up the column header scroll position with the table grid
+	headerView.scrollLeft = gridView.scrollLeft;
+}
+
+function headers_onResize() {
+	var idx = event.columnElement.getAttribute('index');
+
+	// just resize the cell in the first row... this will cause all the other rows to update as well.
+	if (grid.rows.length > 0) {
+		if (grid.rows(0).cells.length > idx) {
+			grid.rows(0).cells(idx).width = event.columnElement.offsetWidth;
+		}
+	}
+
+	// sync the scroll positions
+	gridView_onScroll();
+}
+
+function headers_onClick() {
+	event.returnValue	= false;
+	event.cancelBubble	= true;
+}
+function cancelBubble() {
+	event.returnValue	= false;
+	event.cancelBubble	= true;
+}
+</SCRIPT>
+</HEAD>
+<BODY rightmargin=0 bottommargin=0 leftmargin=0 topmargin=0 scroll=no>
+<DIV onclick="listView_onClick()" ondblclick="listView_onDblClick()" onkeydown="listView_onKeyDown()">
+	<DIV id=headerView class=headerStyle>
+		<!-- We make the column headers 10000px wide to give us an area for the headerView to scroll -->
+		<HFC:COLUMNHEADERS id=headers onresize="headers_onResize();" onclick="headers_onClick()" style="width:10000px;" />
+	</DIV>
+	<DIV id=gridView class=gridStyle onscroll="gridView_onScroll()"></DIV>
+</DIV>
+</BODY>
+
+</HTML>

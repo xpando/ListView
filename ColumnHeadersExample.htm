@@ -1,0 +1,22 @@
+<HTML XMLNS:HFC>
+<HEAD>
+<?IMPORT NAMESPACE="HFC" IMPLEMENTATION="ColumnHeaders.htc"/>
+<SCRIPT>
+function window_onLoad() {
+	headers.addColumn('Img', 30, -1);
+	headers.addColumn('Description', 80, 80);
+	var col = headers.addColumn('Link', 150, 5);
+}
+function headers_onResize() {
+	divDebug.innerText = 'Column Resize(\'' + event.columnElement.innerText +  '\', ' + event.columnElement.offsetWidth.toString() + ')';
+}
+function headers_onClick() {
+	divDebug.innerText = 'Column Click(\'' + event.columnElement.innerText +  '\')';
+}
+</SCRIPT>
+</HEAD>
+<BODY onload="window_onLoad()" rightmargin=0 bottommargin=0 leftmargin=0 topmargin=0 onresize="document.recalc()">
+	<HFC:COLUMNHEADERS id=headers onresize="headers_onResize();" onclick="headers_onClick()" style="background-color:#c0c0c0;" />
+	<div id=divDebug style="width:100%;height:expression(body.clientHeight-headers.offsetHeight+'px');border:inset 1px;background-color:white;overflow:auto;text-align:center;">Status</div>
+</BODY>
+</HTML>
